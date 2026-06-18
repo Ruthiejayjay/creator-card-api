@@ -78,7 +78,7 @@ async function createCreatorCard(serviceData, options = {}) {
 
     if (slug) {
       // Client provided slug - check uniqueness
-      const existing = await CreatorCard.findOne({ slug, deleted: null });
+      const existing = await CreatorCard.findOne({ slug });
       if (existing) {
         throwAppError(CreatorCardMessages.SLUG_TAKEN, 'SL02');
       }
@@ -89,7 +89,7 @@ async function createCreatorCard(serviceData, options = {}) {
       if (slug.length < 5) {
         slug = `${slug}-${generateSuffix()}`;
       } else {
-        const existing = await CreatorCard.findOne({ slug, deleted: null });
+        const existing = await CreatorCard.findOne({ slug });
         if (existing) {
           slug = `${slug}-${generateSuffix()}`;
         }
