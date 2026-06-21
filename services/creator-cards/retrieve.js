@@ -25,24 +25,22 @@ async function retrieveCreatorCard(serviceData, options = {}) {
       throwAppError(CreatorCardMessages.CARD_NOT_FOUND, CreatorCardErrorCodes.CARD_NOT_FOUND);
     }
 
-    if (card.status === 'draft') {
+    if (card.status === CardStatus.DRAFT) {
       throwAppError(CreatorCardMessages.CARD_NOT_FOUND, CreatorCardErrorCodes.CARD_IS_DRAFT);
     }
 
-    if (card.access_type === 'private' && !data.access_code) {
+    if (card.access_type === AccessType.PRIVATE && !data.access_code) {
       throwAppError(CreatorCardMessages.PRIVATE_NO_CODE, CreatorCardErrorCodes.PRIVATE_NO_CODE);
     }
 
-    if (card.access_type === 'private' && data.access_code !== card.access_code) {
+    if (card.access_type === AccessType.PRIVATE && data.access_code !== card.access_code) {
       throwAppError(
         CreatorCardMessages.INVALID_ACCESS_CODE,
         CreatorCardErrorCodes.INVALID_ACCESS_CODE
       );
     }
 
-    const serialized = serializeCard(card);
-
-    response = serialized(card, { excludeAccessCode: true });
+    response = serializeCard(card, { excludeAccessCode: true });
   } catch (error) {
     appLogger.errorX(error, 'retrieve-creator-card-error');
     throw error;
