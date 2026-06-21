@@ -1,7 +1,7 @@
 const validator = require('@app-core/validator');
 const { throwAppError } = require('@app-core/errors');
 const { appLogger } = require('@app-core/logger');
-const CreatorCardMessages = require('@app/messages/creator-card');
+const { CreatorCardMessages, CreatorCardErrorCodes } = require('@app/messages/creator-card');
 const CreatorCard = require('@app/models/creator-card');
 const { serializeCard } = require('./create');
 
@@ -21,7 +21,7 @@ async function deleteCreatorCard(serviceData, options = {}) {
     const card = await CreatorCard.findOne({ slug: data.slug, deleted: null });
 
     if (!card) {
-      throwAppError(CreatorCardMessages.CARD_NOT_FOUND, 'NF01');
+      throwAppError(CreatorCardMessages.CARD_NOT_FOUND, CreatorCardErrorCodes.CARD_NOT_FOUND);
     }
 
     card.deleted = Date.now();
