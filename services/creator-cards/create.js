@@ -2,8 +2,9 @@ const validator = require('@app-core/validator');
 const { throwAppError } = require('@app-core/errors');
 const { appLogger } = require('@app-core/logger');
 const { ulid } = require('@app-core/randomness');
-const CreatorCardMessages = require('@app/messages/creator-card');
+const { CreatorCardMessages, CreatorCardErrorCodes } = require('@app/messages/creator-card');
 const CreatorCard = require('@app/models/creator-card');
+const { CardStatus, AccessType } = require('./enums');
 
 const createCardSpec = `root {
   title string<trim|minLength:3|maxLength:100>
@@ -48,11 +49,17 @@ function generateSuffix() {
   return suffix;
 }
 
-function serializeCard(card) {
+function serializeCard(card, options) {
+  const { excludeAccessCode = false } = options;
   const obj = card.toObject ? card.toObject() : { ...card };
   obj.id = obj._id;
   delete obj._id;
   delete obj.__v;
+
+  if (excludeAccessCode) {
+    delete obj.access_code;
+  }
+
   return obj;
 }
 
@@ -62,28 +69,30 @@ async function createCreatorCard(serviceData, options = {}) {
   const data = validator.validate(serviceData, parsedCreateCardSpec);
 
   try {
-    const accessType = data.access_type || 'public';
+    const accessType = data.access_type || AccessType.PUBLIC;
 
-    // Business rule: access_code required when private
-    if (accessType === 'private' && !data.access_code) {
-      throwAppError(CreatorCardMessages.ACCESS_CODE_REQUIRED, 'AC01');
+    if (accessType === AccessType.PRIVATE && !data.access_code) {
+      throwAppError(
+        CreatorCardMessages.ACCESS_CODE_REQUIRED,
+        CreatorCardErrorCodes.ACCESS_CODE_REQUIRED
+      );
     }
 
-    // Business rule: access_code must not be set on public cards
-    if (accessType === 'public' && data.access_code) {
-      throwAppError(CreatorCardMessages.ACCESS_CODE_FORBIDDEN, 'AC05');
+    if (accessType === AccessType.PUBLIC && data.access_code) {
+      throwAppError(
+        CreatorCardMessages.ACCESS_CODE_FORBIDDEN,
+        CreatorCardErrorCodes.ACCESS_CODE_FORBIDDEN
+      );
     }
 
     let { slug } = data;
 
     if (slug) {
-      // Client provided slug - check uniqueness
       const existing = await CreatorCard.findOne({ slug });
       if (existing) {
-        throwAppError(CreatorCardMessages.SLUG_TAKEN, 'SL02');
+        throwAppError(CreatorCardMessages.SLUG_TAKEN, CreatorCardErrorCodes.SLUG_TAKEN);
       }
     } else {
-      // Auto-generate slug from title
       slug = generateSlugFromTitle(data.title);
 
       if (slug.length < 5) {

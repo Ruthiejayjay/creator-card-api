@@ -1,9 +1,10 @@
 const validator = require('@app-core/validator');
 const { throwAppError } = require('@app-core/errors');
 const { appLogger } = require('@app-core/logger');
-const CreatorCardMessages = require('@app/messages/creator-card');
+const { CreatorCardMessages, CreatorCardErrorCodes } = require('@app/messages/creator-card');
 const CreatorCard = require('@app/models/creator-card');
 const { serializeCard } = require('./create');
+const { CardStatus, AccessType } = require('./enums');
 
 const retrieveCardSpec = `root {
   slug string<trim>
@@ -20,32 +21,28 @@ async function retrieveCreatorCard(serviceData, options = {}) {
   try {
     const card = await CreatorCard.findOne({ slug: data.slug, deleted: null });
 
-    // Rule 1: card does not exist
     if (!card) {
-      throwAppError(CreatorCardMessages.CARD_NOT_FOUND, 'NF01');
+      throwAppError(CreatorCardMessages.CARD_NOT_FOUND, CreatorCardErrorCodes.CARD_NOT_FOUND);
     }
 
-    // Rule 2: card is a draft
     if (card.status === 'draft') {
-      throwAppError(CreatorCardMessages.CARD_NOT_FOUND, 'NF02');
+      throwAppError(CreatorCardMessages.CARD_NOT_FOUND, CreatorCardErrorCodes.CARD_IS_DRAFT);
     }
 
-    // Rule 3: card is private and no access_code supplied
     if (card.access_type === 'private' && !data.access_code) {
-      throwAppError(CreatorCardMessages.PRIVATE_NO_CODE, 'AC03');
+      throwAppError(CreatorCardMessages.PRIVATE_NO_CODE, CreatorCardErrorCodes.PRIVATE_NO_CODE);
     }
 
-    // Rule 4: card is private and access_code doesn't match
     if (card.access_type === 'private' && data.access_code !== card.access_code) {
-      throwAppError(CreatorCardMessages.INVALID_ACCESS_CODE, 'AC04');
+      throwAppError(
+        CreatorCardMessages.INVALID_ACCESS_CODE,
+        CreatorCardErrorCodes.INVALID_ACCESS_CODE
+      );
     }
 
     const serialized = serializeCard(card);
 
-    // Never expose access_code in retrieval responses
-    delete serialized.access_code;
-
-    response = serialized;
+    response = serialized(card, { excludeAccessCode: true });
   } catch (error) {
     appLogger.errorX(error, 'retrieve-creator-card-error');
     throw error;
