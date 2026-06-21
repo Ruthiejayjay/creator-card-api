@@ -49,7 +49,7 @@ function generateSuffix() {
   return suffix;
 }
 
-function serializeCard(card, options) {
+function serializeCard(card, options = {}) {
   const { excludeAccessCode = false } = options;
   const obj = card.toObject ? card.toObject() : { ...card };
   obj.id = obj._id;
